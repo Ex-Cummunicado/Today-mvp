@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Switch, Route } from 'wouter';
+import { useState, useEffect } from 'react';
+import { Switch, Route, useLocation } from 'wouter';
 import { queryClient } from './lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -7,7 +7,10 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import NotFound from '@/pages/not-found';
+import AuthPage from '@/pages/auth';
 
 // Import our custom components
 import { AppSidebar } from '@/components/AppSidebar';
@@ -16,6 +19,10 @@ import { LanguageSelector } from '@/components/LanguageSelector';
 import { UserDashboard } from '@/components/UserDashboard';
 import { RequestScribeCard } from '@/components/RequestScribeCard';
 import { InseeAssistant } from '@/components/InseeAssistant';
+import SearchAndMatchmaking from '@/components/SearchAndMatchmaking';
+import GeoLocationMap from '@/components/GeoLocationMap';
+import { useTTS } from '@/hooks/use-tts';
+import { SIMULATION_USERS, ANIMATIONS } from '@/lib/simulation-data';
 
 // Mock user authentication - TODO: Replace with real auth
 type UserRole = 'blind_user' | 'volunteer' | 'admin';
@@ -33,17 +40,60 @@ const mockUser: User = {
   email: 'alex.chen@email.com',
 };
 
+// Check if user is authenticated
+const isAuthenticated = () => {
+  return localStorage.getItem('inscribemate_user') !== null;
+};
+
+// Get current user
+const getCurrentUser = (): User => {
+  const stored = localStorage.getItem('inscribemate_user');
+  if (stored) {
+    const user = JSON.parse(stored);
+    return {
+      id: user.id || 'demo-user',
+      name: user.name || 'Demo User',
+      email: user.email || 'demo@example.com',
+      role: user.role || 'blind_user'
+    };
+  }
+  return mockUser;
+};
+
 function DashboardPage() {
+  const currentUser = getCurrentUser();
+  const tts = useTTS({ enabled: true });
+
+  useEffect(() => {
+    tts.speak(`Welcome to your dashboard, ${currentUser.name}. You are logged in as a ${currentUser.role.replace('_', ' ')}.`);
+  }, [currentUser, tts]);
+
   return (
-    <div className="p-6">
-      <UserDashboard userRole={mockUser.role} userName={mockUser.name} />
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="p-6"
+    >
+      <UserDashboard userRole={currentUser.role} userName={currentUser.name} />
+    </motion.div>
   );
 }
 
 function RequestPage() {
+  const tts = useTTS({ enabled: true });
+
+  useEffect(() => {
+    tts.speak('Request a scribe page. Schedule assistance or request immediate help for your exams and academic needs.');
+  }, [tts]);
+
   return (
-    <div className="p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="p-6"
+    >
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Request a Scribe</h1>
         <p className="text-muted-foreground">
@@ -51,13 +101,62 @@ function RequestPage() {
         </p>
       </div>
       <RequestScribeCard />
-    </div>
+    </motion.div>
+  );
+}
+
+function SearchPage() {
+  const tts = useTTS({ enabled: true });
+
+  useEffect(() => {
+    tts.speak('Search and matchmaking page. Find scribe requests and match with volunteers.');
+  }, [tts]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="p-6"
+    >
+      <SearchAndMatchmaking />
+    </motion.div>
+  );
+}
+
+function MapPage() {
+  const tts = useTTS({ enabled: true });
+
+  useEffect(() => {
+    tts.speak('Location map page. View requests and volunteers on an interactive map.');
+  }, [tts]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="p-6"
+    >
+      <GeoLocationMap />
+    </motion.div>
   );
 }
 
 function SettingsPage() {
+  const tts = useTTS({ enabled: true });
+
+  useEffect(() => {
+    tts.speak('Accessibility settings page. Customize your experience with accessibility and preference options.');
+  }, [tts]);
+
   return (
-    <div className="p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="p-6"
+    >
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Accessibility Settings</h1>
         <p className="text-muted-foreground">
@@ -103,23 +202,38 @@ function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Text-to-Speech</span>
-              <Badge variant="outline">Coming Soon</Badge>
+              <Badge variant="secondary">Active</Badge>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 function Router() {
-  const [userRole] = useState<UserRole>(mockUser.role);
+  const [userRole, setUserRole] = useState<UserRole>(getCurrentUser().role);
+  const [location, setLocation] = useLocation();
   
+  // Update user role when it changes
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    setUserRole(currentUser.role);
+  }, [location]);
+
+  // Redirect to auth if not authenticated
+  if (!isAuthenticated() && location !== '/auth') {
+    return <AuthPage />;
+  }
+
   return (
     <Switch>
       <Route path="/" component={DashboardPage} />
       <Route path="/request" component={RequestPage} />
+      <Route path="/search" component={SearchPage} />
+      <Route path="/map" component={MapPage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
@@ -127,6 +241,10 @@ function Router() {
 }
 
 function App() {
+  const [currentUser, setCurrentUser] = useState<User>(getCurrentUser());
+  const [location, setLocation] = useLocation();
+  const tts = useTTS({ enabled: true });
+
   // Configure sidebar width for InscribeMate
   const sidebarStyle = {
     '--sidebar-width': '20rem',
@@ -134,16 +252,37 @@ function App() {
   };
 
   const handleRoleSwitch = (newRole: UserRole) => {
-    console.log('Switch user role to:', newRole);
-    // TODO: Implement role switching for demo purposes
+    const updatedUser = { ...currentUser, role: newRole };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('inscribemate_user', JSON.stringify(updatedUser));
+    toast.success(`Switched to ${newRole.replace('_', ' ')} view`);
+    tts.speak(`Switched to ${newRole.replace('_', ' ')} view`);
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('inscribemate_user');
+    setCurrentUser(mockUser);
+    setLocation('/auth');
+    toast.success('Logged out successfully');
+    tts.speak('Logged out successfully');
+  };
+
+  // Update current user when location changes
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+  }, [location]);
+
+  // Show auth page if not authenticated
+  if (!isAuthenticated() && location !== '/auth') {
+    return <AuthPage />;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <SidebarProvider style={sidebarStyle as React.CSSProperties}>
           <div className="flex h-screen w-full">
-            <AppSidebar userRole={mockUser.role} />
+            <AppSidebar userRole={currentUser.role} />
             <div className="flex flex-col flex-1">
               {/* Header */}
               <header 
@@ -161,12 +300,12 @@ function App() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  {/* Demo Role Switcher - TODO: Remove in production */}
+                  {/* Demo Role Switcher */}
                   <div className="hidden md:flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Demo as:</span>
                     <Button
                       size="sm"
-                      variant={mockUser.role === 'blind_user' ? 'default' : 'outline'}
+                      variant={currentUser.role === 'blind_user' ? 'default' : 'outline'}
                       onClick={() => handleRoleSwitch('blind_user')}
                       data-testid="role-blind-user"
                     >
@@ -174,7 +313,7 @@ function App() {
                     </Button>
                     <Button
                       size="sm"
-                      variant={mockUser.role === 'volunteer' ? 'default' : 'outline'}
+                      variant={currentUser.role === 'volunteer' ? 'default' : 'outline'}
                       onClick={() => handleRoleSwitch('volunteer')}
                       data-testid="role-volunteer"
                     >
@@ -182,7 +321,7 @@ function App() {
                     </Button>
                     <Button
                       size="sm"
-                      variant={mockUser.role === 'admin' ? 'default' : 'outline'}
+                      variant={currentUser.role === 'admin' ? 'default' : 'outline'}
                       onClick={() => handleRoleSwitch('admin')}
                       data-testid="role-admin"
                     >
@@ -196,23 +335,33 @@ function App() {
                   {/* User Profile */}
                   <div className="flex items-center gap-2 ml-2">
                     <div className="hidden sm:block text-right">
-                      <p className="text-sm font-medium">{mockUser.name}</p>
+                      <p className="text-sm font-medium">{currentUser.name}</p>
                       <p className="text-xs text-muted-foreground capitalize">
-                        {mockUser.role.replace('_', ' ')}
+                        {currentUser.role.replace('_', ' ')}
                       </p>
                     </div>
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                       <span className="text-sm font-medium text-primary">
-                        {mockUser.name.split(' ').map(n => n[0]).join('')}
+                        {currentUser.name.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogout}
+                      className="text-xs"
+                    >
+                      Logout
+                    </Button>
                   </div>
                 </div>
               </header>
               
               {/* Main Content */}
               <main className="flex-1 overflow-auto" data-testid="main-content">
-                <Router />
+                <AnimatePresence mode="wait">
+                  <Router />
+                </AnimatePresence>
               </main>
             </div>
           </div>

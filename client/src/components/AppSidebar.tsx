@@ -1,4 +1,5 @@
-import { Home, Users, Settings, UserCheck, Shield, Calendar, MessageSquare } from 'lucide-react';
+import { Home, Users, Settings, UserCheck, Shield, Calendar, MessageSquare, Search, MapPin } from 'lucide-react';
+import { useLocation } from 'wouter';
 import {
   Sidebar,
   SidebarContent,
@@ -9,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useTTS } from '@/hooks/use-tts';
 
 // Define user roles for navigation
 type UserRole = 'blind_user' | 'volunteer' | 'admin';
@@ -32,6 +34,18 @@ const menuItems: MenuItem[] = [
     url: '/request',
     icon: UserCheck,
     roles: ['blind_user'],
+  },
+  {
+    title: 'Search & Match',
+    url: '/search',
+    icon: Search,
+    roles: ['blind_user', 'volunteer', 'admin'],
+  },
+  {
+    title: 'Location Map',
+    url: '/map',
+    icon: MapPin,
+    roles: ['blind_user', 'volunteer', 'admin'],
   },
   {
     title: 'Available Requests',
@@ -70,11 +84,13 @@ type AppSidebarProps = {
 };
 
 export function AppSidebar({ userRole = 'blind_user' }: AppSidebarProps) {
+  const [location, setLocation] = useLocation();
+  const tts = useTTS({ enabled: true });
   const filteredItems = menuItems.filter((item) => item.roles.includes(userRole));
 
   const handleNavigation = (url: string, title: string) => {
-    console.log('Navigate to:', url, title);
-    // TODO: Implement actual navigation with wouter
+    setLocation(url);
+    tts.speak(`Navigating to ${title}`);
   };
 
   return (
@@ -89,6 +105,7 @@ export function AppSidebar({ userRole = 'blind_user' }: AppSidebarProps) {
                   <SidebarMenuButton
                     onClick={() => handleNavigation(item.url, item.title)}
                     data-testid={`nav-${item.title.toLowerCase().replace(' ', '-')}`}
+                    isActive={location === item.url}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>

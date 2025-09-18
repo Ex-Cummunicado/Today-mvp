@@ -529,4 +529,31 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Use Supabase storage if environment variables are configured, otherwise fall back to memory storage
+const useSupabase = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY;
+
+console.log('🔍 Environment check:', {
+  SUPABASE_URL: process.env.SUPABASE_URL ? '✅ Set' : '❌ Missing',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+  useSupabase
+});
+
+// Initialize storage synchronously for now, will be updated to async later
+let storageInstance: IStorage;
+
+if (useSupabase) {
+  try {
+    // For now, use memory storage and log that Supabase is configured
+    // TODO: Implement async Supabase storage initialization
+    storageInstance = new MemStorage();
+    console.log('📝 Using memory storage (Supabase configured but async init pending)');
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize Supabase storage, falling back to memory storage:', error);
+    storageInstance = new MemStorage();
+  }
+} else {
+  console.log('📝 Using memory storage (Supabase not configured)');
+  storageInstance = new MemStorage();
+}
+
+export const storage = storageInstance;
